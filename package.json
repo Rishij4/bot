@@ -1,0 +1,14 @@
+{
+  "name": "ai-student-assistant",
+  "version": "2.0.0",
+  "description": "AI Student Assistant with Standard RAG and Agentic RAG using Ollama and Llama 3.2",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "test:rag": "node test_rag.js"
+  },
+  "dependencies": {
+    "pdf-parse": "^1.1.1"
+  }
+}

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Student Assistant - Normal, RAG & Agentic RAG</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-circle">🎓</div>
+        <div>
+          <h1>AI Student Assistant</h1>
+          <p class="subtitle">Ask any question in simple English • Local & Private</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="toggle-upload-btn" class="toggle-upload-btn" onclick="toggleUploadDrawer()">
+          <span>📚 Study Notes</span>
+          <span id="doc-count-badge" class="doc-count-badge">0</span>
+        </button>
+        <div id="status-badge" class="status-badge checking">
+          <span class="status-dot"></span>
+          <span id="status-text">Checking Ollama...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mode Selector Bar -->
+    <nav class="mode-bar">
+      <div class="mode-label">Select Learning Mode:</div>
+      <div class="mode-options">
+        <button id="mode-normal" class="mode-btn active" onclick="setMode('normal')">
+          <span class="mode-icon">💬</span>
+          <span class="mode-title">Normal Chat</span>
+        </button>
+        <button id="mode-rag" class="mode-btn" onclick="setMode('rag')">
+          <span class="mode-icon">📖</span>
+          <span class="mode-title">RAG Chat</span>
+        </button>
+        <button id="mode-agentic" class="mode-btn" onclick="setMode('agentic')">
+          <span class="mode-icon">🧠</span>
+          <span class="mode-title">Agentic RAG</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Study Notes Drawer (Upload & Manage Documents) -->
+    <div id="upload-drawer" class="upload-drawer hidden">
+      <div class="drawer-header">
+        <h3>📂 Upload & Manage Study Notes (PDF)</h3>
+        <button class="close-drawer-btn" onclick="toggleUploadDrawer()">✕</button>
+      </div>
+      <div class="drawer-content">
+        <!-- Upload Box -->
+        <div class="upload-dropzone" id="dropzone" onclick="triggerFileInput()">
+          <input type="file" id="file-input" accept=".pdf,application/pdf" style="display:none;" onchange="handleFileSelected(event)" />
+          <div class="upload-icon">📄</div>
+          <div class="upload-prompt">
+            <strong>Click to upload PDF study notes</strong> or drag and drop here
+          </div>
+          <div class="upload-hint">Supported format: PDF (Max 10 MB). Text will be indexed with nomic-embed-text.</div>
+        </div>
+
+        <div id="upload-status" class="upload-status hidden">
+          <span class="spinner"></span>
+          <span id="upload-status-text">Processing and embedding PDF...</span>
+        </div>
+
+        <!-- Document List -->
+        <div class="document-section">
+          <h4>Indexed Study Notes:</h4>
+          <div id="document-list" class="document-list">
+            <p class="empty-docs-msg">No study notes uploaded yet. Upload a PDF above to enable RAG answers!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline Alert Banner -->
+    <div id="offline-banner" class="offline-banner hidden">
+      <div class="offline-icon">⚠️</div>
+      <div class="offline-text">
+        <strong>Ollama is not running.</strong>
+        <span>Please launch the Ollama app on your computer so the AI can answer.</span>
+      </div>
+      <button id="retry-btn" class="retry-btn" onclick="checkOllamaConnection()">Retry</button>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <main class="chat-container" id="chat-container">
+      <!-- Welcome Message -->
+      <div class="message assistant">
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+          <h3>Hello, Student! 👋</h3>
+          <p>I am your local AI study buddy. You have three learning modes to choose from:</p>
+          <ul>
+            <li><strong>💬 Normal Chat:</strong> General questions answered by Llama 3.2.</li>
+            <li><strong>📖 RAG Chat:</strong> Answers strictly based on your uploaded PDF notes with exact page numbers.</li>
+            <li><strong>🧠 Agentic RAG:</strong> An intelligent agent that evaluates relevance, re-thinks queries if needed, and shows its step-by-step reasoning trace.</li>
+          </ul>
+          <p>Everything runs <strong>100% locally on your computer</strong> with Ollama!</p>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="suggestions-wrapper" id="suggestions-wrapper">
+        <p class="suggestions-label">💡 Try asking one of these:</p>
+        <div class="chips-list">
+          <button class="chip" onclick="askQuickPrompt('Explain photosynthesis in simple words with an everyday example.')">
+            🌱 What is photosynthesis?
+          </button>
+          <button class="chip" onclick="askQuickPrompt('Explain gravity simply as if I am 10 years old.')">
+            🍎 How does gravity work?
+          </button>
+          <button class="chip" onclick="askQuickPrompt('Give me 3 simple tips to study effectively for exams.')">
+            📚 3 quick exam study tips
+          </button>
+          <button class="chip" onclick="askQuickPrompt('What is computer code, and why do people write it?')">
+            💻 What is computer programming?
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Typing / Generating Indicator -->
+    <div id="typing-indicator" class="typing-indicator hidden">
+      <div class="avatar">🤖</div>
+      <div class="typing-bubble">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span id="typing-text" class="typing-text">Llama 3.2 is thinking...</span>
+      </div>
+    </div>
+
+    <!-- Input Form -->
+    <footer class="input-area">
+      <form id="chat-form" class="chat-form" onsubmit="handleFormSubmit(event)">
+        <input
+          type="text"
+          id="user-input"
+          class="user-input"
+          placeholder="Ask a question (e.g. 'What is the main topic of my notes?')..."
+          autocomplete="off"
+        />
+        <button type="submit" id="send-button" class="send-button" title="Send question">
+          <span>Send</span>
+          <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </form>
+      <div class="footer-note" id="footer-note">
+        Mode: <strong id="active-mode-label">Normal Chat</strong> • Powered by <strong>Ollama & Meta Llama 3.2</strong>
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
